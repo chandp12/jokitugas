@@ -3,7 +3,7 @@
 // ========================================
 const CONFIG = {
     adminWhatsApp: '6281385253051',
-    googleAppsScriptUrl: 'https://script.google.com/macros/s/AKfycbz-nXtMfaXODRwc6M9-JU-Mf-MLrzUCJZ6XNNWrmJp-lYUufrqnM93jfi-B5B4Oz_Qn/exec'
+    googleAppsScriptUrl: 'https://script.google.com/macros/s/AKfycbzv3TS8D_WVDikhwhNEgkO_MYpmbKQ5CYx8acfHwSjhGyXMCN93auhzjhbFy2GDFvE2/exec'
 };
 
 // ========================================
@@ -252,7 +252,7 @@ form.addEventListener('submit', async (e) => {
 // Update WhatsApp message
 function buildWhatsAppMessage(data) {
     return `
-Halo Admin, saya ingin melakukan pemesanan di JokiAja.
+Halo Admin, saya ingin melakukan pemesanan DiJokiin.site
 
 DATA MAHASISWA
 Nama: ${data.nama}

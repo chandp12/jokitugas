@@ -3,7 +3,7 @@
  * Deploy sebagai Web App dengan akses "Anyone"
  */
 
-const SPREADSHEET_ID = '15RMtdccbkBFPBLm0AR58xjhcPxKI8rR3HLFlxc6NL0E';
+const SPREADSHEET_ID = '1odCyafEIjl3j8ZiA8464TvZX4SrVRhdIw-MxP1n5aeA';
 const SHEET_NAME = 'Pesanan';
 
 function doPost(e) {
@@ -52,7 +52,7 @@ function appendData(sheet, data) {
         data.jenis_layanan || '',
         data.pertemuan || '',
         data.deadline || '',
-        data.tingkat_kesulitan || '',
+        data.jenis_harga || '',
         data.instruksi_tugas || '',
         data.link_elearning || '',
         data.catatan || '',
