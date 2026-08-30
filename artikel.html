@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Artikel - Dijokiin</title>
+
+    <meta name="description" content="Baca artikel dan informasi terbaru dari Dijokiin.">
+
+    <link rel="canonical" href="https://dijokiin.site/artikel.html">
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .container {
+            width: min(1100px, 90%);
+            margin: auto;
+        }
+
+        /* =========================
+           NAVBAR
+        ========================= */
+
+        .navbar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .logo span {
+            color: #2563eb;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            transition: 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #2563eb;
+        }
+
+        /* =========================
+           HERO
+        ========================= */
+
+        .article-hero {
+            padding: 80px 0 50px;
+            text-align: center;
+        }
+
+        .article-hero .badge {
+            display: inline-block;
+            padding: 7px 14px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .article-hero h1 {
+            font-size: clamp(32px, 5vw, 48px);
+            line-height: 1.15;
+            margin-bottom: 16px;
+            color: #0f172a;
+        }
+
+        .article-hero p {
+            max-width: 650px;
+            margin: auto;
+            color: #64748b;
+            font-size: 17px;
+        }
+
+        /* =========================
+           ARTICLES
+        ========================= */
+
+        .articles-section {
+            padding: 20px 0 80px;
+        }
+
+        #articles-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .article-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 28px;
+            transition: 0.25s ease;
+        }
+
+        .article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .article-date {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .article-date i {
+            margin-right: 6px;
+        }
+
+        .article-card h2 {
+            font-size: 22px;
+            line-height: 1.35;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+
+        .article-excerpt {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 22px;
+        }
+
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #2563eb;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .read-more:hover {
+            color: #1d4ed8;
+        }
+
+        /* =========================
+           LOADING
+        ========================= */
+
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .loading i {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        /* =========================
+           ERROR
+        ========================= */
+
+        .error-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px 20px;
+            background: #ffffff;
+            border: 1px solid #fecaca;
+            border-radius: 16px;
+            color: #b91c1c;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        footer {
+            background: #0f172a;
+            color: #cbd5e1;
+            padding: 30px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 768px) {
+
+            .nav-container {
+                min-height: 64px;
+            }
+
+            .nav-links {
+                gap: 15px;
+            }
+
+            .nav-links a {
+                font-size: 12px;
+            }
+
+            #articles-container {
+                grid-template-columns: 1fr;
+            }
+
+            .article-hero {
+                padding: 60px 0 35px;
+            }
+
+            .article-card {
+                padding: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+         NAVBAR
+    ========================= -->
+
+    <nav class="navbar">
+        <div class="container nav-container">
+
+            <a href="/" class="logo">
+                Di<span>Jokiin</span>
+            </a>
+
+            <ul class="nav-links">
+                <li>
+                    <a href="/">Beranda</a>
+                </li>
+
+                <li>
+                    <a href="/#layanan">Layanan</a>
+                </li>
+
+                <li>
+                    <a href="/artikel.html" class="active">Artikel</a>
+                </li>
+
+                <li>
+                    <a href="/#faq">FAQ</a>
+                </li>
+            </ul>
+
+        </div>
+    </nav>
+
+
+    <!-- =========================
+         HERO
+    ========================= -->
+
+    <section class="article-hero">
+        <div class="container">
+
+            <div class="badge">
+                <i class="fa-solid fa-newspaper"></i>
+                Artikel Dijokiin
+            </div>
+
+            <h1>
+                Informasi & Artikel
+            </h1>
+
+            <p>
+                Temukan berbagai informasi, tips, dan wawasan
+                seputar tugas, akademik, dan teknologi.
+            </p>
+
+        </div>
+    </section>
+
+
+    <!-- =========================
+         ARTICLE LIST
+    ========================= -->
+
+    <section class="articles-section">
+
+        <div class="container">
+
+            <div id="articles-container">
+
+                <div class="loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <p>Memuat artikel...</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         FOOTER
+    ========================= -->
+
+    <footer>
+        <div class="container">
+            © 2026 Dijokiin. All rights reserved.
+        </div>
+    </footer>
+
+
+    <!-- =========================
+         JAVASCRIPT WORDPRESS API
+    ========================= -->
+
+    <script>
+
+        const WORDPRESS_API =
+            'https://cms.dijokiin.site/wp-json/wp/v2/posts';
+
+
+        const articlesContainer =
+            document.getElementById('articles-container');
+
+
+        /*
+         * Mengambil artikel dari WordPress
+         */
+
+        async function loadArticles() {
+
+            try {
+
+                const response = await fetch(
+                    WORDPRESS_API
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        'Gagal mengambil data artikel.'
+                    );
+                }
+
+                const articles =
+                    await response.json();
+
+
+                /*
+                 * Jika belum ada artikel
+                 */
+
+                if (articles.length === 0) {
+
+                    articlesContainer.innerHTML = `
+                        <div class="loading">
+                            <i class="fa-solid fa-newspaper"></i>
+                            <p>Belum ada artikel.</p>
+                        </div>
+                    `;
+
+                    return;
+                }
+
+
+                /*
+                 * Tampilkan artikel
+                 */
+
+                articlesContainer.innerHTML =
+                    articles.map(article => {
+
+                        const title =
+                            article.title.rendered;
+
+                        const excerpt =
+                            article.excerpt.rendered;
+
+                        const date =
+                            new Date(
+                                article.date
+                            ).toLocaleDateString(
+                                'id-ID',
+                                {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                }
+                            );
+
+
+                        return `
+
+                            <article class="article-card">
+
+                                <div class="article-date">
+
+                                    <i class="fa-regular fa-calendar"></i>
+
+                                    ${date}
+
+                                </div>
+
+
+                                <h2>
+                                    ${title}
+                                </h2>
+
+
+                                <div class="article-excerpt">
+                                    ${excerpt}
+                                </div>
+
+
+                                <a
+                                    href="#"
+                                    class="read-more"
+                                    onclick="openArticle('${article.slug}'); return false;"
+                                >
+
+                                    Baca Selengkapnya
+
+                                    <i class="fa-solid fa-arrow-right"></i>
+
+                                </a>
+
+                            </article>
+
+                        `;
+
+                    }).join('');
+
+
+            } catch (error) {
+
+                console.error(error);
+
+                articlesContainer.innerHTML = `
+
+                    <div class="error-message">
+
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+
+                        <p>
+                            Maaf, artikel belum dapat dimuat.
+                        </p>
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+        /*
+         * Untuk sementara kita simpan slug artikel.
+         *
+         * Nanti fungsi ini akan kita sambungkan
+         * ke halaman detail artikel.
+         */
+
+        function openArticle(slug) {
+
+            alert(
+                'Halaman artikel "' +
+                slug +
+                '" akan kita buat pada tahap berikutnya.'
+            );
+
+        }
+
+
+        /*
+         * Jalankan ketika halaman dibuka
+         */
+
+        loadArticles();
+
+    </script>
+
+</body>
+</html>
