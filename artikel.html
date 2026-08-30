@@ -508,11 +508,9 @@
 
         function openArticle(slug) {
 
-            alert(
-                'Halaman artikel "' +
-                slug +
-                '" akan kita buat pada tahap berikutnya.'
-            );
+            window.location.href =
+                '/artikel-detail.html?slug=' +
+            encodeURIComponent(slug);
 
         }
 
