@@ -49,14 +49,35 @@ jobs:
           ssl_context = ssl._create_unverified_context()
 
 
+          request = urllib.request.Request(
+            API_URL,
+            headers={
+              "User-Agent": "Mozilla/5.0"
+            }
+          )
+
+
           with urllib.request.urlopen(
-              API_URL,
-              context=ssl_context
+            request,
+            context=ssl_context
           ) as response:
 
-              data = response.read()
+          data = response.read()
 
-              posts = json.loads(data)
+          print("HTTP Status:", response.status)
+
+          print("Content-Type:", response.headers.get("Content-Type"))
+
+          print("Response awal:")
+
+          print(
+            data[:1000].decode(
+              "utf-8",
+              errors="replace"
+            )
+          )
+
+          posts = json.loads(data)
 
 
           print("Jumlah artikel:", len(posts))
