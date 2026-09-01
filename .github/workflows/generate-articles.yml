@@ -12,29 +12,20 @@ jobs:
 
     steps:
 
-      # =================================
-      # 1. Ambil repository
-      # =================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # =================================
-      # 2. Siapkan Python
-      # =================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      # =================================
-      # 3. Ambil artikel dari WordPress
-      # =================================
       - name: Fetch WordPress articles
         run: |
           echo "Mengambil artikel dari WordPress..."
 
-          # Coba dengan SSL dan tanpa SSL
-          curl -L \
+          # PAKAI -k (ignore SSL) dan -L (follow redirect)
+          curl -k -L \
             -A "Mozilla/5.0" \
             --retry 5 \
             --retry-delay 3 \
@@ -52,10 +43,10 @@ jobs:
           echo ""
           echo ""
 
-          # CEK: Kalau file kosong, coba pakai http (tanpa SSL)
-          if [ ! -s wordpress-posts.json ]; then
-            echo "⚠️ File kosong, mencoba tanpa SSL..."
-            curl -L \
+          # CEK: Kalau masih kosong, coba tanpa SSL
+          if [ ! -s wordpress-posts.json ] || [ "$(head -c 1 wordpress-posts.json)" != "[" ]; then
+            echo "⚠️ Gagal ambil data, mencoba tanpa SSL..."
+            curl -k -L \
               -A "Mozilla/5.0" \
               --retry 5 \
               --retry-delay 3 \
@@ -64,25 +55,24 @@ jobs:
               -o wordpress-posts.json
           fi
 
-          # CEK: Kalau masih kosong, buat dummy data
-          if [ ! -s wordpress-posts.json ]; then
-            echo "⚠️ Masih kosong, membuat dummy data untuk testing..."
+          # CEK: Kalau masih gagal, buat dummy
+          if [ ! -s wordpress-posts.json ] || [ "$(head -c 1 wordpress-posts.json)" != "[" ]; then
+            echo "⚠️ Gagal total, membuat dummy data..."
             echo '[
               {
                 "slug": "contoh-artikel",
                 "title": {"rendered": "Contoh Artikel"},
-                "content": {"rendered": "<p>Ini adalah contoh artikel dari WordPress.</p>"},
-                "excerpt": {"rendered": "<p>Ini excerpt contoh.</p>"},
+                "content": {"rendered": "<p>Ini adalah contoh artikel.</p>"},
+                "excerpt": {"rendered": "<p>Ini excerpt.</p>"},
                 "date": "2026-01-01T00:00:00"
               }
             ]' > wordpress-posts.json
           fi
 
-          echo "✅ Selesai mengambil data."
+          echo "✅ Selesai."
+          echo "Isi file JSON:"
+          cat wordpress-posts.json | head -c 200
 
-      # =================================
-      # 4. Cek JSON valid atau tidak
-      # =================================
       - name: Validate JSON
         run: |
           echo "🔍 Validasi JSON..."
@@ -100,9 +90,6 @@ jobs:
               exit(1)
           "
 
-      # =================================
-      # 5. Buat folder templates jika belum ada
-      # =================================
       - name: Create templates folder
         run: |
           mkdir -p templates
@@ -130,9 +117,6 @@ jobs:
           EOF
           fi
 
-      # =================================
-      # 6. Generate halaman artikel
-      # =================================
       - name: Generate articles
         run: |
           python <<'PY'
@@ -162,7 +146,6 @@ jobs:
               value = re.sub(r"\s+", " ", value)
               return value.strip()
 
-          # Buat index utama
           article_links = []
 
           for post in posts:
@@ -193,7 +176,7 @@ jobs:
               print(f"✅ Berhasil membuat: {output_path}")
               article_links.append(f'<li><a href="/{slug}/">{title}</a></li>')
 
-          # Buat index.html daftar semua artikel
+          # Buat index.html
           index_html = f'''<!DOCTYPE html>
           <html lang="id">
           <head>
@@ -218,9 +201,6 @@ jobs:
 
           PY
 
-      # =================================
-      # 7. Commit hasil generate
-      # =================================
       - name: Commit generated articles
         run: |
           git config user.name "github-actions[bot]"
