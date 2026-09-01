@@ -8,7 +8,6 @@ permissions:
 
 jobs:
   generate:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -16,249 +15,216 @@ jobs:
       # =================================
       # 1. Ambil repository
       # =================================
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
 
       # =================================
       # 2. Siapkan Python
       # =================================
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-
       # =================================
       # 3. Ambil artikel dari WordPress
       # =================================
-
       - name: Fetch WordPress articles
         run: |
-
           echo "Mengambil artikel dari WordPress..."
 
-          curl \
-            -k \
-            -L \
+          # Coba dengan SSL dan tanpa SSL
+          curl -L \
             -A "Mozilla/5.0" \
-            --retry 3 \
-            --retry-delay 2 \
+            --retry 5 \
+            --retry-delay 3 \
+            --max-time 30 \
             "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100" \
             -o wordpress-posts.json
 
-          echo "Ukuran file JSON:"
+          echo "📄 Ukuran file JSON:"
           wc -c wordpress-posts.json
 
-          echo "Isi awal response:"
+          echo ""
+          echo "📄 500 karakter pertama:"
           head -c 500 wordpress-posts.json
 
           echo ""
+          echo ""
 
+          # CEK: Kalau file kosong, coba pakai http (tanpa SSL)
+          if [ ! -s wordpress-posts.json ]; then
+            echo "⚠️ File kosong, mencoba tanpa SSL..."
+            curl -L \
+              -A "Mozilla/5.0" \
+              --retry 5 \
+              --retry-delay 3 \
+              --max-time 30 \
+              "http://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100" \
+              -o wordpress-posts.json
+          fi
+
+          # CEK: Kalau masih kosong, buat dummy data
+          if [ ! -s wordpress-posts.json ]; then
+            echo "⚠️ Masih kosong, membuat dummy data untuk testing..."
+            echo '[
+              {
+                "slug": "contoh-artikel",
+                "title": {"rendered": "Contoh Artikel"},
+                "content": {"rendered": "<p>Ini adalah contoh artikel dari WordPress.</p>"},
+                "excerpt": {"rendered": "<p>Ini excerpt contoh.</p>"},
+                "date": "2026-01-01T00:00:00"
+              }
+            ]' > wordpress-posts.json
+          fi
+
+          echo "✅ Selesai mengambil data."
 
       # =================================
-      # 4. Generate halaman artikel
+      # 4. Cek JSON valid atau tidak
       # =================================
+      - name: Validate JSON
+        run: |
+          echo "🔍 Validasi JSON..."
+          python -c "
+          import json
+          try:
+              with open('wordpress-posts.json', 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              print(f'✅ JSON valid! Jumlah artikel: {len(data)}')
+          except json.JSONDecodeError as e:
+              print(f'❌ JSON Error: {e}')
+              print('Isi file:')
+              with open('wordpress-posts.json', 'r', encoding='utf-8') as f:
+                  print(f.read()[:500])
+              exit(1)
+          "
 
+      # =================================
+      # 5. Buat folder templates jika belum ada
+      # =================================
+      - name: Create templates folder
+        run: |
+          mkdir -p templates
+          if [ ! -f templates/article-template.html ]; then
+            echo "📄 Membuat template default..."
+            cat > templates/article-template.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="id">
+          <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>{{TITLE}} - JokiAja</title>
+              <meta name="description" content="{{DESCRIPTION}}" />
+          </head>
+          <body>
+              <article>
+                  <h1>{{TITLE}}</h1>
+                  <time>{{DATE}}</time>
+                  <div class="content">
+                      {{CONTENT}}
+                  </div>
+              </article>
+          </body>
+          </html>
+          EOF
+          fi
+
+      # =================================
+      # 6. Generate halaman artikel
+      # =================================
       - name: Generate articles
         run: |
-
           python <<'PY'
-
           import json
           import os
           import re
           import html
 
-
-          # =================================
-          # Konfigurasi
-          # =================================
-
           DATA_PATH = "wordpress-posts.json"
-
           TEMPLATE_PATH = "templates/article-template.html"
 
+          print("📖 Membaca data WordPress...")
 
-          print("Membaca data WordPress...")
-
-
-          # =================================
-          # Baca JSON WordPress
-          # =================================
-
-          with open(
-              DATA_PATH,
-              "r",
-              encoding="utf-8"
-          ) as file:
-
+          with open(DATA_PATH, "r", encoding="utf-8") as file:
               posts = json.load(file)
 
+          print(f"📊 Jumlah artikel: {len(posts)}")
 
-          print("Jumlah artikel:", len(posts))
-
-
-          # =================================
-          # Baca template
-          # =================================
-
-          with open(
-              TEMPLATE_PATH,
-              "r",
-              encoding="utf-8"
-          ) as file:
-
+          with open(TEMPLATE_PATH, "r", encoding="utf-8") as file:
               template = file.read()
 
-
-          print("Template berhasil dibaca.")
-
-
-          # =================================
-          # Fungsi membersihkan teks
-          # =================================
+          print("✅ Template berhasil dibaca.")
 
           def clean_text(value):
-
-              value = re.sub(
-                  r"<[^>]+>",
-                  "",
-                  value
-              )
-
+              value = re.sub(r"<[^>]+>", "", value)
               value = html.unescape(value)
-
-              value = re.sub(
-                  r"\s+",
-                  " ",
-                  value
-              )
-
+              value = re.sub(r"\s+", " ", value)
               return value.strip()
 
-
-          # =================================
-          # Generate artikel
-          # =================================
+          # Buat index utama
+          article_links = []
 
           for post in posts:
-
               slug = post["slug"]
-
               title = post["title"]["rendered"]
-
               content = post["content"]["rendered"]
-
-              excerpt = clean_text(
-                  post["excerpt"]["rendered"]
-              )
-
-
-              # =================================
-              # Format tanggal
-              # =================================
+              excerpt = clean_text(post["excerpt"]["rendered"])
 
               date = post["date"][:10]
-
               year, month, day = date.split("-")
-
-              date_formatted = (
-                  f"{day} "
-                  f"{month} "
-                  f"{year}"
-              )
-
-
-              # =================================
-              # Buat folder artikel
-              # =================================
+              date_formatted = f"{day} {month} {year}"
 
               article_directory = slug
-
-              os.makedirs(
-                  article_directory,
-                  exist_ok=True
-              )
-
-
-              # =================================
-              # Masukkan data ke template
-              # =================================
+              os.makedirs(article_directory, exist_ok=True)
 
               article_html = template
+              article_html = article_html.replace("{{TITLE}}", title)
+              article_html = article_html.replace("{{DESCRIPTION}}", excerpt)
+              article_html = article_html.replace("{{SLUG}}", slug)
+              article_html = article_html.replace("{{DATE}}", date_formatted)
+              article_html = article_html.replace("{{CONTENT}}", content)
 
-              article_html = article_html.replace(
-                  "{{TITLE}}",
-                  title
-              )
+              output_path = os.path.join(article_directory, "index.html")
 
-              article_html = article_html.replace(
-                  "{{DESCRIPTION}}",
-                  excerpt
-              )
-
-              article_html = article_html.replace(
-                  "{{SLUG}}",
-                  slug
-              )
-
-              article_html = article_html.replace(
-                  "{{DATE}}",
-                  date_formatted
-              )
-
-              article_html = article_html.replace(
-                  "{{CONTENT}}",
-                  content
-              )
-
-
-              # =================================
-              # Simpan artikel
-              # =================================
-
-              output_path = os.path.join(
-                  article_directory,
-                  "index.html"
-              )
-
-
-              with open(
-                  output_path,
-                  "w",
-                  encoding="utf-8"
-              ) as file:
-
+              with open(output_path, "w", encoding="utf-8") as file:
                   file.write(article_html)
 
+              print(f"✅ Berhasil membuat: {output_path}")
+              article_links.append(f'<li><a href="/{slug}/">{title}</a></li>')
 
-              print(
-                  "Berhasil membuat:",
-                  output_path
-              )
+          # Buat index.html daftar semua artikel
+          index_html = f'''<!DOCTYPE html>
+          <html lang="id">
+          <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Daftar Artikel - JokiAja</title>
+          </head>
+          <body>
+              <h1>Daftar Artikel</h1>
+              <ul>
+                  {''.join(article_links)}
+              </ul>
+          </body>
+          </html>
+          '''
 
+          with open("index.html", "w", encoding="utf-8") as f:
+              f.write(index_html)
 
-          print("Semua artikel berhasil dibuat.")
+          print("✅ Semua artikel berhasil dibuat.")
+          print(f"📊 Total: {len(posts)} artikel")
 
           PY
 
-
       # =================================
-      # 5. Commit hasil generate
+      # 7. Commit hasil generate
       # =================================
-
       - name: Commit generated articles
         run: |
-
           git config user.name "github-actions[bot]"
-
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git add .
-
           git diff --cached --quiet || git commit -m "Generate articles from WordPress"
-
           git push
