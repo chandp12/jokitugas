@@ -13,13 +13,54 @@ jobs:
 
     steps:
 
+      # =================================
+      # 1. Ambil repository
+      # =================================
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
+
+      # =================================
+      # 2. Siapkan Python
+      # =================================
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+
+      # =================================
+      # 3. Ambil artikel dari WordPress
+      # =================================
+
+      - name: Fetch WordPress articles
+        run: |
+
+          echo "Mengambil artikel dari WordPress..."
+
+          curl \
+            -k \
+            -L \
+            -A "Mozilla/5.0" \
+            --retry 3 \
+            --retry-delay 2 \
+            "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100" \
+            -o wordpress-posts.json
+
+          echo "Ukuran file JSON:"
+          wc -c wordpress-posts.json
+
+          echo "Isi awal response:"
+          head -c 500 wordpress-posts.json
+
+          echo ""
+
+
+      # =================================
+      # 4. Generate halaman artikel
+      # =================================
 
       - name: Generate articles
         run: |
@@ -30,62 +71,39 @@ jobs:
           import os
           import re
           import html
-          import urllib.request
-          import ssl
 
 
-          API_URL = "https://cms.dijokiin.site/wp-json/wp/v2/posts"
+          # =================================
+          # Konfigurasi
+          # =================================
+
+          DATA_PATH = "wordpress-posts.json"
 
           TEMPLATE_PATH = "templates/article-template.html"
 
 
-          print("Mengambil artikel dari WordPress...")
+          print("Membaca data WordPress...")
 
 
-          # ---------------------------------
-          # Ambil data WordPress
-          # ---------------------------------
+          # =================================
+          # Baca JSON WordPress
+          # =================================
 
-          ssl_context = ssl._create_unverified_context()
+          with open(
+              DATA_PATH,
+              "r",
+              encoding="utf-8"
+          ) as file:
 
-
-          request = urllib.request.Request(
-            API_URL,
-            headers={
-              "User-Agent": "Mozilla/5.0"
-            }
-          )
-
-
-          with urllib.request.urlopen(
-            request,
-            context=ssl_context
-          ) as response:
-
-          data = response.read()
-
-          print("HTTP Status:", response.status)
-
-          print("Content-Type:", response.headers.get("Content-Type"))
-
-          print("Response awal:")
-
-          print(
-            data[:1000].decode(
-              "utf-8",
-              errors="replace"
-            )
-          )
-
-          posts = json.loads(data)
+              posts = json.load(file)
 
 
           print("Jumlah artikel:", len(posts))
 
 
-          # ---------------------------------
+          # =================================
           # Baca template
-          # ---------------------------------
+          # =================================
 
           with open(
               TEMPLATE_PATH,
@@ -96,9 +114,12 @@ jobs:
               template = file.read()
 
 
-          # ---------------------------------
-          # Fungsi membersihkan HTML
-          # ---------------------------------
+          print("Template berhasil dibaca.")
+
+
+          # =================================
+          # Fungsi membersihkan teks
+          # =================================
 
           def clean_text(value):
 
@@ -119,9 +140,9 @@ jobs:
               return value.strip()
 
 
-          # ---------------------------------
-          # Generate setiap artikel
-          # ---------------------------------
+          # =================================
+          # Generate artikel
+          # =================================
 
           for post in posts:
 
@@ -136,14 +157,13 @@ jobs:
               )
 
 
-              # ---------------------------------
+              # =================================
               # Format tanggal
-              # ---------------------------------
+              # =================================
 
               date = post["date"][:10]
 
               year, month, day = date.split("-")
-
 
               date_formatted = (
                   f"{day} "
@@ -152,12 +172,11 @@ jobs:
               )
 
 
-              # ---------------------------------
+              # =================================
               # Buat folder artikel
-              # ---------------------------------
+              # =================================
 
               article_directory = slug
-
 
               os.makedirs(
                   article_directory,
@@ -165,36 +184,31 @@ jobs:
               )
 
 
-              # ---------------------------------
+              # =================================
               # Masukkan data ke template
-              # ---------------------------------
+              # =================================
 
               article_html = template
-
 
               article_html = article_html.replace(
                   "{{TITLE}}",
                   title
               )
 
-
               article_html = article_html.replace(
                   "{{DESCRIPTION}}",
                   excerpt
               )
-
 
               article_html = article_html.replace(
                   "{{SLUG}}",
                   slug
               )
 
-
               article_html = article_html.replace(
                   "{{DATE}}",
                   date_formatted
               )
-
 
               article_html = article_html.replace(
                   "{{CONTENT}}",
@@ -202,9 +216,9 @@ jobs:
               )
 
 
-              # ---------------------------------
-              # Simpan index.html
-              # ---------------------------------
+              # =================================
+              # Simpan artikel
+              # =================================
 
               output_path = os.path.join(
                   article_directory,
@@ -227,12 +241,14 @@ jobs:
               )
 
 
+          print("Semua artikel berhasil dibuat.")
+
           PY
 
 
-      # ---------------------------------
-      # Commit hasil generate
-      # ---------------------------------
+      # =================================
+      # 5. Commit hasil generate
+      # =================================
 
       - name: Commit generated articles
         run: |
@@ -241,11 +257,8 @@ jobs:
 
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-
           git add .
 
-
           git diff --cached --quiet || git commit -m "Generate articles from WordPress"
-
 
           git push
