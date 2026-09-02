@@ -1,9 +1,0 @@
-[
-    {
-      "slug": "contoh-artikel",
-      "title": {"rendered": "Contoh Artikel"},
-      "content": {"rendered": "<p>Ini adalah contoh artikel.</p>"},
-      "excerpt": {"rendered": "<p>Ini excerpt.</p>"},
-      "date": "2026-01-01T00:00:00"
-    }
-  ]
