@@ -14,14 +14,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check WordPress API
+      - name: Download WordPress posts
         run: |
-          echo "Mengecek WordPress REST API..."
-          curl -L --fail --silent --show-error \
+          echo "Mengambil artikel dari WordPress..."
+
+          curl -k -L --fail --silent --show-error \
             "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish" \
             -o posts.json
 
-          echo "WordPress API berhasil diakses."
+          echo "API WordPress berhasil diakses."
 
       - name: Generate article pages
         run: |
@@ -40,10 +41,12 @@ jobs:
 
           if not template_path.exists():
               raise FileNotFoundError(
-                  "File templates/article-template.html tidak ditemukan."
+                  "templates/article-template.html tidak ditemukan."
               )
 
-          template = template_path.read_text(encoding="utf-8")
+          template = template_path.read_text(
+              encoding="utf-8"
+          )
 
           print(f"Ditemukan {len(posts)} artikel.")
 
@@ -65,31 +68,21 @@ jobs:
                   description
               ).strip()
 
-              title_safe = html.escape(title, quote=True)
-              description_safe = html.escape(
-                  description,
-                  quote=True
-              )
-              slug_safe = html.escape(
-                  slug,
-                  quote=True
-              )
-
               article_html = template
 
               article_html = article_html.replace(
                   "{{TITLE}}",
-                  title_safe
+                  html.escape(title, quote=True)
               )
 
               article_html = article_html.replace(
                   "{{DESCRIPTION}}",
-                  description_safe
+                  html.escape(description, quote=True)
               )
 
               article_html = article_html.replace(
                   "{{SLUG}}",
-                  slug_safe
+                  html.escape(slug, quote=True)
               )
 
               article_html = article_html.replace(
@@ -120,7 +113,7 @@ jobs:
               )
 
           print(
-              f"Selesai. Total artikel: {len(posts)}"
+              f"Selesai membuat {len(posts)} halaman artikel."
           )
           PY
 
@@ -132,7 +125,7 @@ jobs:
           git add .
 
           if git diff --cached --quiet; then
-            echo "Tidak ada perubahan untuk di-commit."
+            echo "Tidak ada perubahan."
           else
             git commit -m "Generate article pages"
             git push
