@@ -1,7 +1,9 @@
 name: Generate Articles
 
 on:
-  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - wordpress_post_published
 
 permissions:
   contents: write
@@ -11,13 +13,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate test article
+      - name: Generate article
         run: |
           python3 <<'PY'
+          import json
+          import html
           from pathlib import Path
+
+          print("Membaca data dari WordPress...")
+
+          event_file = Path(
+              __import__("os").environ["GITHUB_EVENT_PATH"]
+          )
+
+          event = json.loads(
+              event_file.read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          client_payload = event.get(
+              "client_payload"
+          )
+
+          if not client_payload:
+              raise RuntimeError(
+                  "client_payload tidak ditemukan."
+              )
+
+          post = client_payload.get(
+              "post"
+          )
+
+          if not post:
+              raise RuntimeError(
+                  "Data post tidak ditemukan."
+              )
+
+          slug = post["slug"]
+
+          title = post["title"]
+
+          content = post["content"]
+
+          excerpt = post["excerpt"]
+
+          date = post["date"]
+
+          print(
+              f"Artikel diterima: {title}"
+          )
+
+          print(
+              f"Slug: {slug}"
+          )
 
           template_path = Path(
               "templates/article-template.html"
@@ -32,34 +85,43 @@ jobs:
               encoding="utf-8"
           )
 
-          article = template.replace(
+          article_html = template
+
+          article_html = article_html.replace(
               "{{TITLE}}",
-              "Artikel Percobaan"
+              html.escape(
+                  title,
+                  quote=True
+              )
           )
 
-          article = article.replace(
+          article_html = article_html.replace(
               "{{DESCRIPTION}}",
-              "Ini adalah artikel percobaan dari Dijokiin."
+              html.escape(
+                  excerpt,
+                  quote=True
+              )
           )
 
-          article = article.replace(
+          article_html = article_html.replace(
               "{{SLUG}}",
-              "artikel-percobaan"
+              html.escape(
+                  slug,
+                  quote=True
+              )
           )
 
-          article = article.replace(
+          article_html = article_html.replace(
               "{{DATE}}",
-              "2026-09-02"
+              date
           )
 
-          article = article.replace(
+          article_html = article_html.replace(
               "{{CONTENT}}",
-              "<p>Ini adalah artikel percobaan.</p><p>Halaman ini berhasil dibuat otomatis oleh GitHub Actions.</p>"
+              content
           )
 
-          article_dir = Path(
-              "artikel-percobaan"
-          )
+          article_dir = Path(slug)
 
           article_dir.mkdir(
               parents=True,
@@ -71,7 +133,7 @@ jobs:
           )
 
           output_file.write_text(
-              article,
+              article_html,
               encoding="utf-8"
           )
 
@@ -85,11 +147,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add artikel-percobaan/index.html
+          git add .
 
           if git diff --cached --quiet; then
             echo "Tidak ada perubahan."
           else
-            git commit -m "Generate test article"
+            git commit -m "Generate article from WordPress"
             git push
           fi
