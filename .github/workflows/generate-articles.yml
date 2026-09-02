@@ -1,0 +1,120 @@
+name: Generate Articles
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate article pages
+        env:
+          WORDPRESS_API: https://cms.dijokiin.site/wp-json/wp/v2/posts
+        run: |
+          python <<'PY'
+          import json
+          import html
+          import re
+          from pathlib import Path
+          from urllib.request import urlopen
+
+          API = "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish"
+
+          print("Mengambil artikel dari WordPress...")
+
+          with urlopen(API) as response:
+              posts = json.load(response)
+
+          template_path = Path("templates/article-template.html")
+          template = template_path.read_text(encoding="utf-8")
+
+          for post in posts:
+              slug = post["slug"]
+
+              title = post["title"]["rendered"]
+
+              content = post["content"]["rendered"]
+
+              date = post["date"][:10]
+
+              description = re.sub(
+                  r"<[^>]+>",
+                  "",
+                  post["excerpt"]["rendered"]
+              )
+
+              description = re.sub(
+                  r"\s+",
+                  " ",
+                  description
+              ).strip()
+
+              title_safe = html.escape(title, quote=True)
+              description_safe = html.escape(description, quote=True)
+              slug_safe = html.escape(slug, quote=True)
+
+              article_html = template
+
+              article_html = article_html.replace(
+                  "{{TITLE}}",
+                  title_safe
+              )
+
+              article_html = article_html.replace(
+                  "{{DESCRIPTION}}",
+                  description_safe
+              )
+
+              article_html = article_html.replace(
+                  "{{SLUG}}",
+                  slug_safe
+              )
+
+              article_html = article_html.replace(
+                  "{{DATE}}",
+                  date
+              )
+
+              article_html = article_html.replace(
+                  "{{CONTENT}}",
+                  content
+              )
+
+              article_dir = Path(slug)
+              article_dir.mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
+
+              output_file = article_dir / "index.html"
+
+              output_file.write_text(
+                  article_html,
+                  encoding="utf-8"
+              )
+
+              print(f"Berhasil membuat: {output_file}")
+
+          print(f"Total artikel: {len(posts)}")
+          PY
+
+      - name: Commit generated articles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan."
+          else
+            git commit -m "Generate article pages"
+            git push
+          fi
