@@ -14,98 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download WordPress posts
-        run: |
-          echo "Mengambil artikel dari WordPress..."
-
-          curl -L --fail --silent --show-error \
-            -H "Accept: application/json" \
-            "https://r.jina.ai/https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish" \
-            -o posts-response.json
-
-          echo "Response dari Jina berhasil diterima."
-
-          echo "Ukuran response:"
-          wc -c posts-response.json
-
-          echo "Isi awal response:"
-          head -c 500 posts-response.json
-
-      - name: Convert response to WordPress JSON
+      - name: Generate test article
         run: |
           python3 <<'PY'
-          import json
           from pathlib import Path
-
-          print("Memeriksa response Jina...")
-
-          response_file = Path("posts-response.json")
-
-          if not response_file.exists():
-              raise FileNotFoundError(
-                  "posts-response.json tidak ditemukan."
-              )
-
-          raw = response_file.read_text(
-              encoding="utf-8"
-          ).strip()
-
-          if not raw:
-              raise RuntimeError(
-                  "Response dari Jina kosong."
-              )
-
-          print("Response tidak kosong.")
-
-          try:
-              data = json.loads(raw)
-          except json.JSONDecodeError:
-              print("Response bukan JSON langsung.")
-              print("Isi response:")
-              print(raw[:2000])
-              raise
-
-          # Jina JSON mode biasanya membungkus hasil
-          # di dalam object "data".
-          if isinstance(data, dict) and "data" in data:
-              data = data["data"]
-
-          if isinstance(data, list):
-              posts = data
-          else:
-              raise RuntimeError(
-                  "Format response bukan daftar artikel WordPress."
-              )
-
-          Path("posts.json").write_text(
-              json.dumps(
-                  posts,
-                  ensure_ascii=False
-              ),
-              encoding="utf-8"
-          )
-
-          print(
-              f"Berhasil mendapatkan {len(posts)} artikel."
-          )
-          PY
-
-      - name: Generate article pages
-        run: |
-          python3 <<'PY'
-          import json
-          import html
-          import re
-          from pathlib import Path
-
-          print("Membaca data artikel...")
-
-          with open(
-              "posts.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
-              posts = json.load(f)
 
           template_path = Path(
               "templates/article-template.html"
@@ -120,103 +32,64 @@ jobs:
               encoding="utf-8"
           )
 
-          print(
-              f"Ditemukan {len(posts)} artikel."
+          article = template.replace(
+              "{{TITLE}}",
+              "Artikel Percobaan"
           )
 
-          for post in posts:
+          article = article.replace(
+              "{{DESCRIPTION}}",
+              "Ini adalah artikel percobaan dari Dijokiin."
+          )
 
-              slug = post["slug"]
+          article = article.replace(
+              "{{SLUG}}",
+              "artikel-percobaan"
+          )
 
-              title = post["title"]["rendered"]
+          article = article.replace(
+              "{{DATE}}",
+              "2026-09-02"
+          )
 
-              content = post["content"]["rendered"]
+          article = article.replace(
+              "{{CONTENT}}",
+              "<p>Ini adalah artikel percobaan.</p><p>Halaman ini berhasil dibuat otomatis oleh GitHub Actions.</p>"
+          )
 
-              date = post["date"][:10]
+          article_dir = Path(
+              "artikel-percobaan"
+          )
 
-              description = re.sub(
-                  r"<[^>]+>",
-                  "",
-                  post["excerpt"]["rendered"]
-              )
+          article_dir.mkdir(
+              parents=True,
+              exist_ok=True
+          )
 
-              description = re.sub(
-                  r"\s+",
-                  " ",
-                  description
-              ).strip()
+          output_file = (
+              article_dir / "index.html"
+          )
 
-              article_html = template
-
-              article_html = article_html.replace(
-                  "{{TITLE}}",
-                  html.escape(
-                      title,
-                      quote=True
-                  )
-              )
-
-              article_html = article_html.replace(
-                  "{{DESCRIPTION}}",
-                  html.escape(
-                      description,
-                      quote=True
-                  )
-              )
-
-              article_html = article_html.replace(
-                  "{{SLUG}}",
-                  html.escape(
-                      slug,
-                      quote=True
-                  )
-              )
-
-              article_html = article_html.replace(
-                  "{{DATE}}",
-                  date
-              )
-
-              article_html = article_html.replace(
-                  "{{CONTENT}}",
-                  content
-              )
-
-              article_dir = Path(slug)
-
-              article_dir.mkdir(
-                  parents=True,
-                  exist_ok=True
-              )
-
-              output_file = (
-                  article_dir / "index.html"
-              )
-
-              output_file.write_text(
-                  article_html,
-                  encoding="utf-8"
-              )
-
-              print(
-                  f"Berhasil membuat: {output_file}"
-              )
+          output_file.write_text(
+              article,
+              encoding="utf-8"
+          )
 
           print(
-              f"Selesai membuat {len(posts)} halaman artikel."
+              f"Berhasil membuat: {output_file}"
           )
           PY
 
-      - name: Commit generated articles
+      - name: Commit generated article
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .
+          git add artikel-percobaan/index.html
 
           if git diff --cached --quiet; then
-            echo "Tidak ada perubahan untuk di-commit."
+            echo "Tidak ada perubahan."
           else
-            git commit -m "Generate article pages"
+            git commit -m "Generate test article"
             git push
           fi
