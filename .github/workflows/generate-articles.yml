@@ -14,15 +14,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download WordPress posts
+      - name: Test WordPress API
         run: |
-          echo "Mengambil artikel dari WordPress..."
+          echo "Testing WordPress API..."
 
-          curl -k -L --fail --silent --show-error \
-            "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish" \
+          curl -k -L -v \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/139.0 Safari/537.36" \
+            "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=10&status=publish" \
             -o posts.json
 
-          echo "API WordPress berhasil diakses."
+          echo "HTTP request selesai."
+
+          if [ -s posts.json ]; then
+            echo "Response diterima."
+            head -c 500 posts.json
+          else
+            echo "Response kosong."
+            exit 1
+          fi
 
       - name: Generate article pages
         run: |
