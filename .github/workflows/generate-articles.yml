@@ -14,34 +14,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate article pages
-        env:
-          WORDPRESS_API: https://cms.dijokiin.site/wp-json/wp/v2/posts
+      - name: Check WordPress API
         run: |
-          python <<'PY'
+          echo "Mengecek WordPress REST API..."
+          curl -L --fail --silent --show-error \
+            "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish" \
+            -o posts.json
+
+          echo "WordPress API berhasil diakses."
+
+      - name: Generate article pages
+        run: |
+          python3 <<'PY'
           import json
           import html
           import re
           from pathlib import Path
-          from urllib.request import urlopen
 
-          API = "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish"
+          print("Membaca data artikel...")
 
-          print("Mengambil artikel dari WordPress...")
-
-          with urlopen(API) as response:
-              posts = json.load(response)
+          with open("posts.json", "r", encoding="utf-8") as f:
+              posts = json.load(f)
 
           template_path = Path("templates/article-template.html")
+
+          if not template_path.exists():
+              raise FileNotFoundError(
+                  "File templates/article-template.html tidak ditemukan."
+              )
+
           template = template_path.read_text(encoding="utf-8")
+
+          print(f"Ditemukan {len(posts)} artikel.")
 
           for post in posts:
               slug = post["slug"]
-
               title = post["title"]["rendered"]
-
               content = post["content"]["rendered"]
-
               date = post["date"][:10]
 
               description = re.sub(
@@ -57,8 +66,14 @@ jobs:
               ).strip()
 
               title_safe = html.escape(title, quote=True)
-              description_safe = html.escape(description, quote=True)
-              slug_safe = html.escape(slug, quote=True)
+              description_safe = html.escape(
+                  description,
+                  quote=True
+              )
+              slug_safe = html.escape(
+                  slug,
+                  quote=True
+              )
 
               article_html = template
 
@@ -100,9 +115,13 @@ jobs:
                   encoding="utf-8"
               )
 
-              print(f"Berhasil membuat: {output_file}")
+              print(
+                  f"Berhasil membuat: {output_file}"
+              )
 
-          print(f"Total artikel: {len(posts)}")
+          print(
+              f"Selesai. Total artikel: {len(posts)}"
+          )
           PY
 
       - name: Commit generated articles
@@ -113,7 +132,7 @@ jobs:
           git add .
 
           if git diff --cached --quiet; then
-            echo "Tidak ada perubahan."
+            echo "Tidak ada perubahan untuk di-commit."
           else
             git commit -m "Generate article pages"
             git push
