@@ -14,24 +14,81 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test WordPress API
+      - name: Download WordPress posts
         run: |
-          echo "Testing WordPress API..."
+          echo "Mengambil artikel dari WordPress..."
 
-          curl -k -L -v \
-            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/139.0 Safari/537.36" \
-            "https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=10&status=publish" \
-            -o posts.json
+          curl -L --fail --silent --show-error \
+            -H "Accept: application/json" \
+            "https://r.jina.ai/https://cms.dijokiin.site/wp-json/wp/v2/posts?per_page=100&status=publish" \
+            -o posts-response.json
 
-          echo "HTTP request selesai."
+          echo "Response dari Jina berhasil diterima."
 
-          if [ -s posts.json ]; then
-            echo "Response diterima."
-            head -c 500 posts.json
-          else
-            echo "Response kosong."
-            exit 1
-          fi
+          echo "Ukuran response:"
+          wc -c posts-response.json
+
+          echo "Isi awal response:"
+          head -c 500 posts-response.json
+
+      - name: Convert response to WordPress JSON
+        run: |
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          print("Memeriksa response Jina...")
+
+          response_file = Path("posts-response.json")
+
+          if not response_file.exists():
+              raise FileNotFoundError(
+                  "posts-response.json tidak ditemukan."
+              )
+
+          raw = response_file.read_text(
+              encoding="utf-8"
+          ).strip()
+
+          if not raw:
+              raise RuntimeError(
+                  "Response dari Jina kosong."
+              )
+
+          print("Response tidak kosong.")
+
+          try:
+              data = json.loads(raw)
+          except json.JSONDecodeError:
+              print("Response bukan JSON langsung.")
+              print("Isi response:")
+              print(raw[:2000])
+              raise
+
+          # Jina JSON mode biasanya membungkus hasil
+          # di dalam object "data".
+          if isinstance(data, dict) and "data" in data:
+              data = data["data"]
+
+          if isinstance(data, list):
+              posts = data
+          else:
+              raise RuntimeError(
+                  "Format response bukan daftar artikel WordPress."
+              )
+
+          Path("posts.json").write_text(
+              json.dumps(
+                  posts,
+                  ensure_ascii=False
+              ),
+              encoding="utf-8"
+          )
+
+          print(
+              f"Berhasil mendapatkan {len(posts)} artikel."
+          )
+          PY
 
       - name: Generate article pages
         run: |
@@ -43,10 +100,16 @@ jobs:
 
           print("Membaca data artikel...")
 
-          with open("posts.json", "r", encoding="utf-8") as f:
+          with open(
+              "posts.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
               posts = json.load(f)
 
-          template_path = Path("templates/article-template.html")
+          template_path = Path(
+              "templates/article-template.html"
+          )
 
           if not template_path.exists():
               raise FileNotFoundError(
@@ -57,12 +120,18 @@ jobs:
               encoding="utf-8"
           )
 
-          print(f"Ditemukan {len(posts)} artikel.")
+          print(
+              f"Ditemukan {len(posts)} artikel."
+          )
 
           for post in posts:
+
               slug = post["slug"]
+
               title = post["title"]["rendered"]
+
               content = post["content"]["rendered"]
+
               date = post["date"][:10]
 
               description = re.sub(
@@ -81,17 +150,26 @@ jobs:
 
               article_html = article_html.replace(
                   "{{TITLE}}",
-                  html.escape(title, quote=True)
+                  html.escape(
+                      title,
+                      quote=True
+                  )
               )
 
               article_html = article_html.replace(
                   "{{DESCRIPTION}}",
-                  html.escape(description, quote=True)
+                  html.escape(
+                      description,
+                      quote=True
+                  )
               )
 
               article_html = article_html.replace(
                   "{{SLUG}}",
-                  html.escape(slug, quote=True)
+                  html.escape(
+                      slug,
+                      quote=True
+                  )
               )
 
               article_html = article_html.replace(
@@ -105,12 +183,15 @@ jobs:
               )
 
               article_dir = Path(slug)
+
               article_dir.mkdir(
                   parents=True,
                   exist_ok=True
               )
 
-              output_file = article_dir / "index.html"
+              output_file = (
+                  article_dir / "index.html"
+              )
 
               output_file.write_text(
                   article_html,
@@ -134,7 +215,7 @@ jobs:
           git add .
 
           if git diff --cached --quiet; then
-            echo "Tidak ada perubahan."
+            echo "Tidak ada perubahan untuk di-commit."
           else
             git commit -m "Generate article pages"
             git push
