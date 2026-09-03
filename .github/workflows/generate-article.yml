@@ -142,7 +142,7 @@ jobs:
           )
           PY
 
-      - name: Commit generated articles
+      - name: Commit generated article
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -150,8 +150,8 @@ jobs:
           git add .
 
           if git diff --cached --quiet; then
-            echo "Tidak ada perubahan untuk di-commit."
+            echo "Tidak ada perubahan."
           else
-            git commit -m "Generate article pages"
+            git commit -m "Generate article from WordPress"
             git push
           fi
