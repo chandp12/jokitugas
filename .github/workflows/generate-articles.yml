@@ -64,6 +64,18 @@ jobs:
 
           date = post["date"]
 
+          yoast_head = post.get("yoast_head", "")
+
+          yoast_head = yoast_head.replace(
+          "https://cms.dijokiin.site",
+          "https://dijokiin.site"
+          )
+
+          yoast_head = yoast_head.replace(
+          "http://cms.dijokiin.site",
+           "https://dijokiin.site"
+          )
+
           print(
               f"Artikel diterima: {title}"
           )
