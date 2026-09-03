@@ -64,18 +64,6 @@ jobs:
 
           date = post["date"]
 
-          yoast_head = post.get("yoast_head", "")
-
-          yoast_head = yoast_head.replace(
-          "https://cms.dijokiin.site",
-          "https://dijokiin.site"
-          )
-
-          yoast_head = yoast_head.replace(
-          "http://cms.dijokiin.site",
-           "https://dijokiin.site"
-          )
-
           print(
               f"Artikel diterima: {title}"
           )
@@ -105,11 +93,6 @@ jobs:
                   title,
                   quote=True
               )
-          )
-
-          article_html = article_html.replace(
-          "{{YOAST_HEAD}}",
-          yoast_head
           )
 
           article_html = article_html.replace(
@@ -159,20 +142,16 @@ jobs:
           )
           PY
 
-          - name: Commit generated article
-            run: |
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Commit generated articles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-              git add .
+          git add .
 
-              if git diff --cached --quiet; then
-                echo "Tidak ada perubahan."
-              else
-              git commit -m "Generate article from WordPress"
-
-              git pull --rebase origin main
-
-              git push origin HEAD:main
-              fi
-              
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan untuk di-commit."
+          else
+            git commit -m "Generate article pages"
+            git push
+          fi
