@@ -108,6 +108,11 @@ jobs:
           )
 
           article_html = article_html.replace(
+          "{{YOAST_HEAD}}",
+          yoast_head
+          )
+
+          article_html = article_html.replace(
               "{{DESCRIPTION}}",
               html.escape(
                   excerpt,
